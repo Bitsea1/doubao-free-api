@@ -5,31 +5,9 @@
 ![](https://img.shields.io/github/forks/llm-red-team/doubao-free-api.svg)
 ![](https://img.shields.io/docker/pulls/vinlic/doubao-free-api.svg)
 
-支持高速流式输出、支持多轮对话、支持联网搜索、支持智能体对话（计划支持）、支持AI绘图（计划支持）、支持长文档解读（计划支持）、支持图像解析（计划支持），零配置部署，多路token支持，自动清理会话痕迹。
+支持高速流式输出、支持多轮对话、支持联网搜索、支持文生图（已支持）、支持图生图（已支持）、支持图文解读（已支持），零配置部署，多路token支持，自动清理会话痕迹。
 
 与OpenAI接口完全兼容。
-
-还有以下十个free-api欢迎关注：
-
-Moonshot AI（Kimi.ai）接口转API [kimi-free-api](https://github.com/LLM-Red-Team/kimi-free-api)
-
-阶跃星辰 (跃问StepChat) 接口转API [step-free-api](https://github.com/LLM-Red-Team/step-free-api)
-
-阿里通义 (Qwen) 接口转API [qwen-free-api](https://github.com/LLM-Red-Team/qwen-free-api)
-
-智谱AI (智谱清言) 接口转API [glm-free-api](https://github.com/LLM-Red-Team/glm-free-api)
-
-秘塔AI (Metaso) 接口转API [metaso-free-api](https://github.com/LLM-Red-Team/metaso-free-api)
-
-字节跳动（即梦AI）接口转API [jimeng-free-api](https://github.com/LLM-Red-Team/jimeng-free-api)
-
-讯飞星火（Spark）接口转API [spark-free-api](https://github.com/LLM-Red-Team/spark-free-api)
-
-MiniMax（海螺AI）接口转API [hailuo-free-api](https://github.com/LLM-Red-Team/hailuo-free-api)
-
-深度求索（DeepSeek）接口转API [deepseek-free-api](https://github.com/LLM-Red-Team/deepseek-free-api)
-
-聆心智能 (Emohaa) 接口转API [emohaa-free-api](https://github.com/LLM-Red-Team/emohaa-free-api)
 
 ## 目录
 
@@ -45,6 +23,9 @@ MiniMax（海螺AI）接口转API [hailuo-free-api](https://github.com/LLM-Red-T
 * [推荐使用客户端](#推荐使用客户端)
 * [接口列表](#接口列表)
   * [对话补全](#对话补全)
+  * [图文对话补全](#图文对话补全)
+  * [文生图](#文生图)
+  * [图生图](#图生图)
   * [sessionid存活检测](#sessionid存活检测)
 * [注意事项](#注意事项)
   * [Nginx反代优化](#Nginx反代优化)
@@ -115,7 +96,7 @@ version: '3'
 services:
   doubao-free-api:
     container_name: doubao-free-api
-    image: vinlic/doubao-free-api:latest
+    image: bitsea19/doubao-free-api:latest
     restart: always
     ports:
       - "8000:8000"
@@ -264,6 +245,199 @@ Authorization: Bearer [sessionid]
         "total_tokens": 2
     },
     "created": 1733300587
+}
+```
+### 图文对话补全
+图文对话补全接口，与openai的 [chat-completions-api](https://platform.openai.com/docs/guides/text-generation/chat-completions-api) 兼容。
+
+**POST /v1/chat/completions**
+
+✨ 图文功能：支持发送图片进行多模态对话！
+
+**请求数据（图片请求）：**
+```json
+{
+  "model": "doubao",
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "这张图片里有什么？"
+        },
+        {
+          "type": "image_url",
+          "image_url": {
+            "url": "https://example.com/image.jpg"
+          }
+        }
+      ]
+    }
+  ],
+  "stream": false
+}
+```
+
+**请求数据（Base64请求）：**
+```json
+{
+  "model": "doubao",
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "请描述这张图片"
+        },
+        {
+          "type": "image_url",
+          "image_url": {
+            "url": "data:image/jpeg;base64,/9j/4AAQSkZJRg..."
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+### 兼容格式：
+```json
+// 格式 1: image_url（OpenAI 标准格式）
+{
+  "type": "image_url",
+  "image_url": {
+    "url": "https://example.com/image.jpg"
+  }
+}
+
+// 格式 2: image
+{
+  "type": "image",
+  "image_url": "https://example.com/image.jpg"
+}
+
+// 格式 3: file
+{
+  "type": "file",
+  "file_url": {
+    "url": "https://example.com/image.jpg"
+  }
+}
+```
+
+**响应数据**：
+```json
+{
+    // 如果想获得原生多轮对话体验，此id，你可以传入到下一轮对话的conversation_id来接续上下文
+    "id": "397193850645250",
+    "model": "doubao",
+    "object": "chat.completion",
+    "choices": [
+        {
+            "index": 0,
+            "message": {
+                "role": "assistant",
+                "content": "我叫豆包呀，能陪你聊天、帮你答疑解惑呢。"
+            },
+            "finish_reason": "stop"
+        }
+    ],
+    "usage": {
+        "prompt_tokens": 1,
+        "completion_tokens": 1,
+        "total_tokens": 2
+    },
+    "created": 1733300587
+}
+```
+
+### 文生图
+
+**POST** `/v1/images/generations`
+
+**请求参数**:
+```json
+{
+    "model": "Seedream 4.0", //模型
+    "prompt": "机器猫", //提示词
+    "ratio": "1:1", //比例
+    "style": "卡通", //风格
+    "stream": false //流式输出
+}
+```
+
+**响应数据**：
+```json
+{
+    "id": "30868724412460802",
+    "model": "Seedream 4.0",
+    "object": "chat.completion",
+    "choices": [
+        {
+            "index": 0,
+            "message": {
+                "role": "assistant",
+                "content": "我将根据参考图生成一张1:1比例的卡通风格图片。\n\n以下是为你生成的图片：\n",
+                "images": [
+                    "https://p3-flow-imagex-sign/1.jpg",
+                ]
+            },
+            "finish_reason": "stop"
+        }
+    ],
+    "usage": {
+        "prompt_tokens": 1,
+        "completion_tokens": 1,
+        "total_tokens": 2
+    },
+    "created": 1763985148
+}
+```
+
+### 图生图
+
+**POST** `/v1/images/generations`
+
+**请求参数**:
+```json
+{
+    "model": "Seedream 4.0", //模型
+    "prompt": "机器猫", //提示词
+    "image": "https://example.com/image.jpg",
+    "ratio": "1:1", //比例
+    "style": "卡通", //风格
+    "stream": false //流式输出
+}
+```
+
+**响应数据**：
+```json
+{
+    "id": "30868724412460802",
+    "model": "Seedream 4.0",
+    "object": "chat.completion",
+    "choices": [
+        {
+            "index": 0,
+            "message": {
+                "role": "assistant",
+                "content": "我将根据参考图生成一张1:1比例的卡通风格图片。以下是为你生成的图片：",
+                "images": [
+                    "https://p3-flow-imagex-sign/1.jpg",
+                ]
+            },
+            "finish_reason": "stop"
+        }
+    ],
+    "usage": {
+        "prompt_tokens": 1,
+        "completion_tokens": 1,
+        "total_tokens": 2
+    },
+    "created": 1763985148
 }
 ```
 
