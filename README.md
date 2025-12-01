@@ -126,7 +126,7 @@ services:
 ```shell
 npm i -g vercel --registry http://registry.npmmirror.com
 vercel login
-git clone https://github.com/LLM-Red-Team/doubao-free-api
+git clone https://github.com/Bitsea1/doubao-free-api
 cd doubao-free-api
 vercel --prod
 ```
